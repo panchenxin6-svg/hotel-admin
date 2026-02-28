@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pcx.hotel_admin.mapper.StatsMapper">
+
+    <select id="getChannelStats" resultType="com.pcx.hotel_admin.vo.ChannelStatVO">
+        SELECT
+            c.channel_code AS channelCode,
+            c.channel_name AS channelName,
+            COUNT(b.id) AS count
+        FROM booking b
+        LEFT JOIN channel c ON c.id = b.channel_id
+        WHERE b.create_time &gt;= #{from}
+          AND b.create_time &lt; #{to}
+        GROUP BY c.channel_code, c.channel_name
+        ORDER BY count DESC
+    </select>
+
+</mapper>

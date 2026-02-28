@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pcx.hotel_admin.mapper.BookingMapper">
+
+    <resultMap id="BaseResultMap" type="com.pcx.hotel_admin.entity.Booking">
+        <id column="id" property="id"/>
+        <result column="booking_no" property="bookingNo"/>
+        <result column="guest_name" property="guestName"/>
+        <result column="guest_phone" property="guestPhone"/>
+        <result column="id_card" property="idCard"/>
+        <result column="room_type_id" property="roomTypeId"/>
+        <result column="channel_id" property="channelId"/>
+        <result column="check_in_date" property="checkInDate" javaType="java.time.LocalDate" jdbcType="DATE"/>
+        <result column="check_out_date" property="checkOutDate" javaType="java.time.LocalDate" jdbcType="DATE"/>
+        <result column="total_amount" property="totalAmount"/>
+        <result column="status" property="status"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT * FROM booking ORDER BY create_time DESC
+    </select>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM booking WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.pcx.hotel_admin.entity.Booking" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO booking (booking_no, guest_name, guest_phone, id_card, room_type_id, channel_id, 
+                             check_in_date, check_out_date, total_amount, status, remark, create_time, update_time)
+        VALUES (#{bookingNo}, #{guestName}, #{guestPhone}, #{idCard}, #{roomTypeId}, #{channelId},
+                #{checkInDate}, #{checkOutDate}, #{totalAmount}, #{status}, #{remark}, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="com.pcx.hotel_admin.entity.Booking">
+        UPDATE booking
+        SET guest_name = #{guestName},
+            guest_phone = #{guestPhone},
+            id_card = #{idCard},
+            room_type_id = #{roomTypeId},
+            channel_id = #{channelId},
+            check_in_date = #{checkInDate},
+            check_out_date = #{checkOutDate},
+            total_amount = #{totalAmount},
+            status = #{status},
+            remark = #{remark},
+            update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM booking WHERE id = #{id}
+    </delete>
+
+</mapper>
