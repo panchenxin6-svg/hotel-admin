@@ -68,3 +68,52 @@ INSERT INTO channel (channel_name, channel_code, contact_person, contact_phone, 
 ('美团', 'MEITUAN', '李经理', '13800138001', 8.00),
 ('飞猪', 'FLIGGY', '王经理', '13800138002', 9.50),
 ('官网直销', 'DIRECT', '客服', '400-888-8888', 0.00);
+
+-- Room Table
+CREATE TABLE IF NOT EXISTS room (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  room_no VARCHAR(32) NOT NULL,
+  room_type_id BIGINT NOT NULL,
+  is_hourly TINYINT NOT NULL DEFAULT 0,
+  status TINYINT NOT NULL DEFAULT 0,
+  active TINYINT NOT NULL DEFAULT 1,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_room_no (room_no),
+  KEY idx_room_type (room_type_id),
+  KEY idx_room_active (active)
+);
+
+-- Room Price Table
+CREATE TABLE IF NOT EXISTS room_price (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  room_type_id BIGINT NOT NULL,
+  price_date DATE NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  UNIQUE KEY uk_room_price (room_type_id, price_date)
+);
+
+-- Room Request Log Table
+CREATE TABLE IF NOT EXISTS room_req_log (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  room_id BIGINT NOT NULL,
+  req_date DATE NOT NULL,
+  content VARCHAR(255) NOT NULL,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_req_room_date (room_id, req_date)
+);
+
+-- Sample Room Data
+INSERT INTO room (room_no, room_type_id, is_hourly, status) VALUES
+('1001', 1, 0, 0),
+('1002', 1, 0, 1),
+('1003', 2, 0, 2),
+('1004', 3, 1, 0),
+('1005', 1, 0, 1),
+('1006', 1, 0, 0),
+('2001', 4, 1, 1),
+('2002', 3, 0, 2),
+('2003', 1, 0, 0),
+('2004', 2, 0, 1),
+('2005', 4, 1, 0),
+('2006', 3, 0, 1);

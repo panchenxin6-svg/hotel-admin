@@ -1,0 +1,192 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: #f5f7fa;
+}
+
+/* 登录页 */
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-box {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  width: 360px;
+}
+
+.login-box h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+/* 顶部栏 */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 60px;
+  background: white;
+  padding: 0 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.topbar-left h1 {
+  font-size: 20px;
+  color: #333;
+  font-weight: 600;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.current-user {
+  color: #666;
+  font-size: 14px;
+}
+
+/* 内容区 */
+.content-wrapper {
+  display: flex;
+  height: calc(100vh - 60px);
+}
+
+/* 左侧筛选 */
+.sidebar {
+  width: 240px;
+  background: white;
+  padding: 20px;
+  border-right: 1px solid #e8e8e8;
+  overflow-y: auto;
+}
+
+.sidebar h3 {
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.sidebar .el-form-item {
+  margin-bottom: 16px;
+}
+
+/* 中间房间网格 */
+.room-grid {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  align-content: start;
+}
+
+/* 房间卡片 */
+.room-card {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.room-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+.room-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.room-no {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.room-body {
+  font-size: 13px;
+  color: #666;
+}
+
+.room-info p {
+  margin-bottom: 6px;
+}
+
+.room-time {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #eee;
+  font-size: 12px;
+}
+
+.room-time p {
+  margin-bottom: 4px;
+}
+
+.room-demand {
+  margin-top: 10px;
+}
+
+/* 抽屉内容 */
+.drawer-content {
+  padding: 0 16px;
+}
+
+.guest-info {
+  padding: 12px;
+  background: #f9f9f9;
+  border-radius: 6px;
+}
+
+.guest-info p {
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #666;
+}
+
+.guest-info p:last-child {
+  margin-bottom: 0;
+}
+
+.drawer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.drawer-actions .el-button {
+  flex: 1;
+  min-width: 100px;
+}
+
+/* Element Plus 调整 */
+.el-divider__text {
+  background: #fff;
+  color: #909399;
+  font-size: 14px;
+}
