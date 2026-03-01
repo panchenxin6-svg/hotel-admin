@@ -117,3 +117,28 @@ INSERT INTO room (room_no, room_type_id, is_hourly, status) VALUES
 ('2004', 2, 0, 1),
 ('2005', 4, 1, 0),
 ('2006', 3, 0, 1);
+
+-- System User Table
+CREATE TABLE IF NOT EXISTS sys_user (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  username VARCHAR(50) NOT NULL,
+  password_hash VARCHAR(100) NOT NULL,
+  role VARCHAR(20) NOT NULL,
+  active TINYINT NOT NULL DEFAULT 1,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_username (username)
+);
+
+-- Init Users (幂等)
+INSERT INTO sys_user (username, password_hash, role, active)
+SELECT 'superadmin', '$2b$10$wvrb3mBhcEoRiGJ0DkG/1OXFf9dFUAjcJxZe9VTttVErL1oZGnP6a', 'SUPER_ADMIN', 1
+WHERE NOT EXISTS (SELECT 1 FROM sys_user WHERE username = 'superadmin');
+
+INSERT INTO sys_user (username, password_hash, role, active)
+SELECT 'admin', '$2b$10$wvrb3mBhcEoRiGJ0DkG/1OXFf9dFUAjcJxZe9VTttVErL1oZGnP6a', 'ADMIN', 1
+WHERE NOT EXISTS (SELECT 1 FROM sys_user WHERE username = 'admin');
+
+INSERT INTO sys_user (username, password_hash, role, active)
+SELECT 'user1', '$2b$10$wvrb3mBhcEoRiGJ0DkG/1OXFf9dFUAjcJxZe9VTttVErL1oZGnP6a', 'USER', 1
+WHERE NOT EXISTS (SELECT 1 FROM sys_user WHERE username = 'user1');

@@ -59,16 +59,49 @@ const app = createApp({
     });
 
     // 登录
-    const handleLogin = () => {
-      if (loginForm.username && loginForm.password) {
-        isLoggedIn.value = true;
-      } else {
+    const handleLogin = async () => {
+      if (!loginForm.username || !loginForm.password) {
         ElementPlus.ElMessage.warning('请输入用户名和密码');
+        return;
+      }
+
+      const formData = new URLSearchParams();
+      formData.append('username', loginForm.username);
+      formData.append('password', loginForm.password);
+
+      try {
+        // 1) 发起登录（不要用 status 200/302 判断成败）
+        await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: formData.toString(),
+          credentials: 'same-origin',
+          redirect: 'manual'
+        });
+
+        // 2) 探针：请求一个必须登录的接口（你的 SecurityConfig 已要求 /api/** authenticated）
+        const probe = await fetch('/api/room-types', {
+          credentials: 'same-origin',
+          redirect: 'manual'
+        });
+
+        if (probe.status === 200) {
+          isLoggedIn.value = true;
+          currentUser.value = loginForm.username;
+          ElementPlus.ElMessage.success('登录成功');
+        } else {
+          ElementPlus.ElMessage.error('用户名或密码错误');
+        }
+      } catch (e) {
+        ElementPlus.ElMessage.error('用户名或密码错误');
       }
     };
 
     // 退出
-    const handleLogout = () => {
+    const handleLogout = async () => {
+      try {
+        await fetch('/logout', { method: 'POST', credentials: 'same-origin' });
+      } catch (e) {}
       isLoggedIn.value = false;
       loginForm.username = '';
       loginForm.password = '';

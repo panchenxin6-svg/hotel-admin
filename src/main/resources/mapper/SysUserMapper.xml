@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pcx.hotel_admin.mapper.SysUserMapper">
+    <select id="selectByUsername" resultType="com.pcx.hotel_admin.entity.SysUser">
+        SELECT id, username, password_hash AS passwordHash, role, active, 
+               create_time AS createTime, update_time AS updateTime
+        FROM sys_user
+        WHERE username = #{username} AND active = 1
+    </select>
+    
+    <select id="selectAll" resultType="com.pcx.hotel_admin.entity.SysUser">
+        SELECT id, username, password_hash AS passwordHash, role, active, 
+               create_time AS createTime, update_time AS updateTime
+        FROM sys_user
+        ORDER BY id
+    </select>
+    
+    <select id="selectById" resultType="com.pcx.hotel_admin.entity.SysUser">
+        SELECT id, username, password_hash AS passwordHash, role, active, 
+               create_time AS createTime, update_time AS updateTime
+        FROM sys_user
+        WHERE id = #{id}
+    </select>
+    
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_user (username, password_hash, role, active)
+        VALUES (#{username}, #{passwordHash}, #{role}, #{active})
+    </insert>
+    
+    <update id="updateById">
+        UPDATE sys_user
+        SET role = #{role}
+        WHERE id = #{id}
+    </update>
+</mapper>
