@@ -1,10 +1,11 @@
-const { createApp, ref, computed, reactive } = Vue;
+const { createApp, ref, computed, reactive, watch } = Vue;
 
 const app = createApp({
   setup() {
     // 登录状态
     const isLoggedIn = ref(false);
     const currentUser = ref('管理员');
+    const currentRole = ref('');
     const loginForm = reactive({
       username: '',
       password: ''
@@ -19,28 +20,76 @@ const app = createApp({
     });
 
     // 房型列表
-    const roomTypes = ['大床房', '标准间', '豪华套房', '单人间'];
+    const roomTypes = ref([]);
 
-    // Mock 数据 - 12个房间
-    const rooms = ref([
-      { id: 1, no: '1001', typeName: '标准间', capacity: 2, todayPrice: 199, status: 0, isHourly: false, checkInTime: '', checkOutTime: '', demandCount: 0 },
-      { id: 2, no: '1002', typeName: '大床房', capacity: 2, todayPrice: 229, status: 1, isHourly: false, checkInTime: '14:00', checkOutTime: '12:00', demandCount: 2 },
-      { id: 3, no: '1003', typeName: '单人间', capacity: 1, todayPrice: 149, status: 2, isHourly: false, checkInTime: '', checkOutTime: '', demandCount: 0 },
-      { id: 4, no: '1004', typeName: '豪华套房', capacity: 4, todayPrice: 499, status: 0, isHourly: true, checkInTime: '', checkOutTime: '', demandCount: 0 },
-      { id: 5, no: '1005', typeName: '标准间', capacity: 2, todayPrice: 199, status: 1, isHourly: false, checkInTime: '15:30', checkOutTime: '11:00', demandCount: 1 },
-      { id: 6, no: '1006', typeName: '大床房', capacity: 2, todayPrice: 229, status: 0, isHourly: false, checkInTime: '', checkOutTime: '', demandCount: 0 },
-      { id: 7, no: '2001', typeName: '单人间', capacity: 1, todayPrice: 149, status: 1, isHourly: true, checkInTime: '10:00', checkOutTime: '14:00', demandCount: 0 },
-      { id: 8, no: '2002', typeName: '豪华套房', capacity: 4, todayPrice: 499, status: 2, isHourly: false, checkInTime: '', checkOutTime: '', demandCount: 3 },
-      { id: 9, no: '2003', typeName: '标准间', capacity: 2, todayPrice: 199, status: 0, isHourly: false, checkInTime: '', checkOutTime: '', demandCount: 0 },
-      { id: 10, no: '2004', typeName: '大床房', capacity: 2, todayPrice: 229, status: 1, isHourly: false, checkInTime: '16:00', checkOutTime: '10:00', demandCount: 0 },
-      { id: 11, no: '2005', typeName: '单人间', capacity: 1, todayPrice: 149, status: 0, isHourly: true, checkInTime: '', checkOutTime: '', demandCount: 1 },
-      { id: 12, no: '2006', typeName: '豪华套房', capacity: 4, todayPrice: 499, status: 1, isHourly: false, checkInTime: '12:00', checkOutTime: '14:00', demandCount: 0 }
-    ]);
+    // 房间数据
+    const rooms = ref([]);
 
     // 抽屉
     const drawerVisible = ref(false);
     const drawerTitle = ref('');
     const currentRoom = ref({});
+
+    // 格式化日期
+    const formatDate = (d) => {
+      const date = new Date(d);
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    // 加载看板数据
+    const loadDashboard = async () => {
+      const dateStr = formatDate(filters.date);
+      try {
+        const resp = await fetch(`/api/rooms/dashboard?date=${dateStr}`, {
+          credentials: 'same-origin'
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.code === 200) {
+            // 映射字段
+            rooms.value = data.data.map(item => ({
+              id: item.id,
+              no: item.roomNo,
+              typeName: item.roomTypeName,
+              todayPrice: item.todayPrice,
+              status: item.status,
+              isHourly: item.isHourly === 1,
+              demandCount: item.demandCount,
+              capacity: 0,
+              checkInTime: '',
+              checkOutTime: ''
+            }));
+          }
+        }
+      } catch (e) {
+        console.error('加载看板数据失败', e);
+      }
+    };
+
+    // 加载房型列表
+    const loadRoomTypes = async () => {
+      try {
+        const resp = await fetch('/api/room-types', { credentials: 'same-origin' });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.code === 200) {
+            roomTypes.value = data.data.map(rt => rt.typeName);
+          }
+        }
+      } catch (e) {
+        console.error('加载房型失败', e);
+      }
+    };
+
+    // 监听日期变化
+    watch(() => filters.date, () => {
+      if (isLoggedIn.value) {
+        loadDashboard();
+      }
+    });
 
     // 筛选后的房间
     const filteredRooms = computed(() => {
@@ -58,6 +107,11 @@ const app = createApp({
       });
     });
 
+    // 是否为管理员
+    const isAdmin = computed(() => {
+      return currentRole.value === 'ADMIN' || currentRole.value === 'SUPER_ADMIN';
+    });
+
     // 登录
     const handleLogin = async () => {
       if (!loginForm.username || !loginForm.password) {
@@ -70,7 +124,7 @@ const app = createApp({
       formData.append('password', loginForm.password);
 
       try {
-        // 1) 发起登录（不要用 status 200/302 判断成败）
+        // 1) 发起登录
         await fetch('/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -79,16 +133,25 @@ const app = createApp({
           redirect: 'manual'
         });
 
-        // 2) 探针：请求一个必须登录的接口（你的 SecurityConfig 已要求 /api/** authenticated）
-        const probe = await fetch('/api/room-types', {
+        // 2) 用 /api/me 验证登录并获取用户信息
+        const resp = await fetch('/api/me', {
           credentials: 'same-origin',
           redirect: 'manual'
         });
 
-        if (probe.status === 200) {
-          isLoggedIn.value = true;
-          currentUser.value = loginForm.username;
-          ElementPlus.ElMessage.success('登录成功');
+        if (resp.status === 200) {
+          const data = await resp.json();
+          if (data.code === 200) {
+            isLoggedIn.value = true;
+            currentUser.value = data.data.username;
+            currentRole.value = data.data.role;
+            ElementPlus.ElMessage.success('登录成功');
+            // 加载数据
+            await loadRoomTypes();
+            await loadDashboard();
+          } else {
+            ElementPlus.ElMessage.error('用户名或密码错误');
+          }
         } else {
           ElementPlus.ElMessage.error('用户名或密码错误');
         }
@@ -103,8 +166,15 @@ const app = createApp({
         await fetch('/logout', { method: 'POST', credentials: 'same-origin' });
       } catch (e) {}
       isLoggedIn.value = false;
+      currentRole.value = '';
       loginForm.username = '';
       loginForm.password = '';
+      rooms.value = [];
+    };
+
+    // 用户管理（占位）
+    const openUserAdmin = () => {
+      ElementPlus.ElMessage.info("TODO: 用户管理");
     };
 
     // 获取状态文本
@@ -120,45 +190,110 @@ const app = createApp({
     };
 
     // 打开抽屉
-    const openDrawer = (room) => {
+    const openDrawer = async (room) => {
       currentRoom.value = room;
       drawerTitle.value = `房间 ${room.no} - 详情`;
       drawerVisible.value = true;
+      // TODO: 加载需求列表（下一轮改 HTML 后实现）
     };
 
     // 标记待清洁
-    const markClean = () => {
-      currentRoom.value.status = 2;
-      const idx = rooms.value.findIndex(r => r.id === currentRoom.value.id);
-      if (idx !== -1) {
-        rooms.value[idx].status = 2;
+    const markClean = async () => {
+      try {
+        const resp = await fetch(`/api/rooms/${currentRoom.value.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 2 }),
+          credentials: 'same-origin'
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.code === 200) {
+            currentRoom.value.status = 2;
+            await loadDashboard();
+            ElementPlus.ElMessage.success('已标记为待清洁');
+          } else {
+            ElementPlus.ElMessage.error('操作失败');
+          }
+        } else {
+          ElementPlus.ElMessage.error('操作失败');
+        }
+      } catch (e) {
+        ElementPlus.ElMessage.error('操作失败');
       }
-      ElementPlus.ElMessage.success('已标记为待清洁');
     };
 
     // 标记空房
-    const markEmpty = () => {
-      currentRoom.value.status = 0;
-      const idx = rooms.value.findIndex(r => r.id === currentRoom.value.id);
-      if (idx !== -1) {
-        rooms.value[idx].status = 0;
+    const markEmpty = async () => {
+      try {
+        const resp = await fetch(`/api/rooms/${currentRoom.value.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 0 }),
+          credentials: 'same-origin'
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.code === 200) {
+            currentRoom.value.status = 0;
+            await loadDashboard();
+            ElementPlus.ElMessage.success('已标记为空房');
+          } else {
+            ElementPlus.ElMessage.error('操作失败');
+          }
+        } else {
+          ElementPlus.ElMessage.error('操作失败');
+        }
+      } catch (e) {
+        ElementPlus.ElMessage.error('操作失败');
       }
-      ElementPlus.ElMessage.success('已标记为空房');
     };
 
     // 新增需求
-    const addDemand = () => {
-      const idx = rooms.value.findIndex(r => r.id === currentRoom.value.id);
-      if (idx !== -1) {
-        rooms.value[idx].demandCount++;
-        currentRoom.value.demandCount = rooms.value[idx].demandCount;
+    const addDemand = async () => {
+      try {
+        const { value: content } = await ElementPlus.ElMessageBox.prompt('请输入需求内容', '新增需求', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          inputPattern: /.+/,
+          inputErrorMessage: '内容不能为空'
+        });
+
+        if (content) {
+          const dateStr = formatDate(filters.date);
+          const resp = await fetch(`/api/rooms/${currentRoom.value.id}/req`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content, date: dateStr }),
+            credentials: 'same-origin'
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data.code === 200) {
+              await loadDashboard();
+              // 更新当前房间的 demandCount
+              const idx = rooms.value.findIndex(r => r.id === currentRoom.value.id);
+              if (idx !== -1) {
+                currentRoom.value.demandCount = rooms.value[idx].demandCount;
+              }
+              ElementPlus.ElMessage.success('已添加新需求');
+            } else {
+              ElementPlus.ElMessage.error('添加失败');
+            }
+          } else {
+            ElementPlus.ElMessage.error('添加失败');
+          }
+        }
+      } catch (e) {
+        // 用户取消不报错
       }
-      ElementPlus.ElMessage.success('已添加新需求');
     };
 
     return {
       isLoggedIn,
       currentUser,
+      currentRole,
+      isAdmin,
       loginForm,
       filters,
       roomTypes,
@@ -168,6 +303,7 @@ const app = createApp({
       currentRoom,
       handleLogin,
       handleLogout,
+      openUserAdmin,
       getStatusText,
       getStatusType,
       openDrawer,

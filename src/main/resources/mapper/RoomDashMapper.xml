@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pcx.hotel_admin.mapper.RoomDashMapper">
+
+    <select id="selectDashboard" resultType="com.pcx.hotel_admin.vo.RoomDashVO">
+        SELECT
+          r.id,
+          r.room_no AS roomNo,
+          r.status,
+          r.is_hourly AS isHourly,
+          r.room_type_id AS roomTypeId,
+          rt.type_name AS roomTypeName,
+          COALESCE(rp.price, rt.price) AS todayPrice,
+          COALESCE(req.cnt, 0) AS demandCount
+        FROM room r
+        LEFT JOIN room_type rt ON rt.id = r.room_type_id
+        LEFT JOIN room_price rp ON rp.room_type_id = r.room_type_id AND rp.price_date = #{date}
+        LEFT JOIN (
+          SELECT room_id, COUNT(*) AS cnt
+          FROM room_req_log
+          WHERE req_date = #{date}
+          GROUP BY room_id
+        ) req ON req.room_id = r.id
+        WHERE r.active = 1
+        ORDER BY r.room_no
+    </select>
+
+    <update id="updateStatus">
+        UPDATE room
+        SET status = #{status}, update_time = NOW()
+        WHERE id = #{id} AND active = 1
+    </update>
+
+    <insert id="insertReq">
+        INSERT INTO room_req_log (room_id, req_date, content)
+        VALUES (#{roomId}, #{date}, #{content})
+    </insert>
+
+    <select id="selectReqs" resultType="com.pcx.hotel_admin.vo.RoomReqVO">
+        SELECT id, content, req_date AS reqDate, create_time AS createTime
+        FROM room_req_log
+        WHERE room_id = #{roomId} AND req_date = #{date}
+        ORDER BY create_time DESC
+    </select>
+
+</mapper>

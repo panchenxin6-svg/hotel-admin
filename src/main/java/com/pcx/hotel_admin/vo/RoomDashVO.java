@@ -8,9 +8,9 @@ public class RoomDashVO {
     private Long id;
     private String roomNo;
     private Integer status;
-    private Boolean isHourly;
+    private Integer isHourly;
     private Long roomTypeId;
     private String roomTypeName;
     private BigDecimal todayPrice;
-    private Integer demandCount;
+    private Long demandCount;
 }
