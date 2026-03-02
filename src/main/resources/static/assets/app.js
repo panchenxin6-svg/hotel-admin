@@ -1,4 +1,4 @@
-const { createApp, ref, computed, reactive, watch } = Vue;
+const { createApp, ref, computed, reactive, watch, nextTick } = Vue;
 
 const app = createApp({
   setup() {
@@ -9,6 +9,16 @@ const app = createApp({
     const loginForm = reactive({
       username: '',
       password: ''
+    });
+
+    // 页面切换
+    const activePage = ref('home');
+
+    // KPI 数据
+    const kpi = reactive({
+      todayRevenue: '0',
+      todayOccupied: 0,
+      toClean: 0
     });
 
     // 筛选条件
@@ -43,8 +53,15 @@ const app = createApp({
     // 格式化时间戳为 HH:mm
     const formatTs = (dtStr) => {
       if (!dtStr) return '';
-      // 简单截取 ISO 字符串的时间部分
       return dtStr.substring(11, 16);
+    };
+
+    // 计算 KPI
+    const updateKpi = () => {
+      // 今日入住 = status === 1 的房间数
+      kpi.todayOccupied = rooms.value.filter(r => r.status === 1).length;
+      // 待清洁 = status === 2 的房间数
+      kpi.toClean = rooms.value.filter(r => r.status === 2).length;
     };
 
     // 加载看板数据
@@ -57,7 +74,6 @@ const app = createApp({
         if (resp.ok) {
           const data = await resp.json();
           if (data.code === 200) {
-            // 映射字段
             rooms.value = data.data.map(item => ({
               id: item.id,
               no: item.roomNo,
@@ -70,6 +86,8 @@ const app = createApp({
               checkInTime: '',
               checkOutTime: ''
             }));
+            // 更新 KPI
+            updateKpi();
           }
         }
       } catch (e) {
@@ -116,7 +134,8 @@ const app = createApp({
     // 加载营业额数据
     const loadRevenue = async () => {
       if (!window.echarts) return;
-      const today = new Date();
+      await nextTick();
+      const today = new Date(filters.date);
       const weekAgo = new Date(today);
       weekAgo.setDate(weekAgo.getDate() - 6);
       const fromStr = formatDate(weekAgo);
@@ -130,6 +149,10 @@ const app = createApp({
           if (data.code === 200) {
             const dates = data.data.map(it => it.date);
             const revenues = data.data.map(it => parseFloat(it.revenue) || 0);
+            // 更新 KPI 营业额（取最后一天）
+            if (revenues.length > 0) {
+              kpi.todayRevenue = revenues[revenues.length - 1];
+            }
             if (!revChartInstance) {
               revChartInstance = echarts.init(document.getElementById('revChart'));
             }
@@ -150,9 +173,18 @@ const app = createApp({
     watch(() => filters.date, () => {
       if (isLoggedIn.value) {
         loadDashboard();
-        if (isAdmin.value) {
+        if (activePage.value === 'home' && isAdmin.value) {
           loadRevenue();
         }
+      }
+    });
+
+    // 监听页面切换
+    watch(activePage, (newVal) => {
+      if (newVal === 'home' && isAdmin.value) {
+        loadRevenue();
+      } else if (newVal === 'rooms') {
+        loadDashboard();
       }
     });
 
@@ -189,7 +221,6 @@ const app = createApp({
       formData.append('password', loginForm.password);
 
       try {
-        // 1) 发起登录
         await fetch('/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -198,7 +229,6 @@ const app = createApp({
           redirect: 'manual'
         });
 
-        // 2) 用 /api/me 验证登录并获取用户信息
         const resp = await fetch('/api/me', {
           credentials: 'same-origin',
           redirect: 'manual'
@@ -236,6 +266,7 @@ const app = createApp({
       } catch (e) {}
       isLoggedIn.value = false;
       currentRole.value = '';
+      activePage.value = 'home';
       loginForm.username = '';
       loginForm.password = '';
       rooms.value = [];
@@ -263,7 +294,6 @@ const app = createApp({
       currentRoom.value = room;
       drawerTitle.value = `房间 ${room.no} - 详情`;
       drawerVisible.value = true;
-      // 加载需求列表
       await loadReqs(room.id);
     };
 
@@ -346,7 +376,6 @@ const app = createApp({
           if (resp.ok) {
             const data = await resp.json();
             if (data.code === 200) {
-              // 刷新需求列表和看板
               await loadReqs(currentRoom.value.id);
               await loadDashboard();
               ElementPlus.ElMessage.success('已添加新需求');
@@ -367,6 +396,8 @@ const app = createApp({
       currentUser,
       currentRole,
       isAdmin,
+      activePage,
+      kpi,
       loginForm,
       filters,
       roomTypes,

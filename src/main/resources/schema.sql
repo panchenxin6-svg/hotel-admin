@@ -142,3 +142,23 @@ WHERE NOT EXISTS (SELECT 1 FROM sys_user WHERE username = 'admin');
 INSERT INTO sys_user (username, password_hash, role, active)
 SELECT 'user1', '$2b$10$wvrb3mBhcEoRiGJ0DkG/1OXFf9dFUAjcJxZe9VTttVErL1oZGnP6a', 'USER', 1
 WHERE NOT EXISTS (SELECT 1 FROM sys_user WHERE username = 'user1');
+
+-- Task Table
+CREATE TABLE IF NOT EXISTS task (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  room_id BIGINT,
+  title VARCHAR(100) NOT NULL,
+  content TEXT,
+  status TINYINT NOT NULL DEFAULT 0 COMMENT '0-待处理 1-处理中 2-已完成待确认 3-已确认',
+  created_by VARCHAR(50) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  assigned_to VARCHAR(50),
+  assigned_at DATETIME,
+  done_by VARCHAR(50),
+  done_at DATETIME,
+  approved_by VARCHAR(50),
+  approved_at DATETIME,
+  KEY idx_status (status),
+  KEY idx_assigned_to (assigned_to),
+  KEY idx_created_by (created_by)
+);

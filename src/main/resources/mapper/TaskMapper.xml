@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pcx.hotel_admin.mapper.TaskMapper">
+
+    <select id="selectList" resultType="com.pcx.hotel_admin.vo.TaskVO">
+        SELECT
+            t.id,
+            t.room_id AS roomId,
+            r.room_no AS roomNo,
+            t.title,
+            t.content,
+            t.status,
+            t.created_by AS createdBy,
+            t.created_at AS createdAt,
+            t.assigned_to AS assignedTo,
+            t.assigned_at AS assignedAt,
+            t.done_by AS doneBy,
+            t.done_at AS doneAt,
+            t.approved_by AS approvedBy,
+            t.approved_at AS approvedAt
+        FROM task t
+        LEFT JOIN room r ON r.id = t.room_id
+        WHERE 1=1
+        <if test="status != null">
+            AND t.status = #{status}
+        </if>
+        <if test="mine != null and mine">
+            AND (t.created_by = #{username} OR t.assigned_to = #{username})
+        </if>
+        ORDER BY t.created_at DESC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO task (room_id, title, content, status, created_by, created_at)
+        VALUES (#{roomId}, #{title}, #{content}, #{status}, #{createdBy}, NOW())
+    </insert>
+
+    <update id="updateAssign">
+        UPDATE task
+        SET assigned_to = #{assignedTo}, assigned_at = NOW(), status = 1
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateDone">
+        UPDATE task
+        SET done_by = #{doneBy}, done_at = NOW(), status = 2
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateApprove">
+        UPDATE task
+        SET approved_by = #{approvedBy}, approved_at = NOW(), status = 3
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectById" resultType="com.pcx.hotel_admin.vo.TaskVO">
+        SELECT id, room_id AS roomId, title, content, status,
+               created_by AS createdBy, created_at AS createdAt,
+               assigned_to AS assignedTo, assigned_at AS assignedAt,
+               done_by AS doneBy, done_at AS doneAt,
+               approved_by AS approvedBy, approved_at AS approvedAt
+        FROM task
+        WHERE id = #{id}
+    </select>
+
+</mapper>
