@@ -100,6 +100,16 @@
             </div>
           </div>
         </main>
+
+        <!-- 管理员统计图表 -->
+        <div v-if="isAdmin" class="stats-section">
+          <el-card>
+            <template #header>
+              <span>营业额（业务日）</span>
+            </template>
+            <div id="revChart" style="height: 280px;"></div>
+          </el-card>
+        </div>
       </div>
 
       <!-- 右侧抽屉 -->
@@ -124,11 +134,15 @@
           </div>
 
           <el-divider>今日需求日志</el-divider>
-          <el-timeline>
-            <el-timeline-item timestamp="10:30" placement="top">需要添加矿泉水</el-timeline-item>
-            <el-timeline-item timestamp="09:15" placement="top">已打扫完毕</el-timeline-item>
-            <el-timeline-item timestamp="08:00" placement="top">客人入住</el-timeline-item>
+          <el-timeline v-if="reqList.length">
+            <el-timeline-item
+              v-for="it in reqList"
+              :key="it.id"
+              :timestamp="formatTs(it.createTime)"
+              placement="top"
+            >{{ it.content }}</el-timeline-item>
           </el-timeline>
+          <div v-else style="color:#999;font-size:13px;">暂无需求</div>
 
           <el-divider>操作</el-divider>
           <div class="drawer-actions">
@@ -144,6 +158,7 @@
   <script src="https://unpkg.com/vue@3.4.15/dist/vue.global.prod.js"></script>
   <script src="https://unpkg.com/element-plus@2.4.4/dist/index.full.js"></script>
   <script src="https://unpkg.com/@element-plus/icons-vue@2.3.1/dist/index.iife.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
   <script src="assets/app.js"></script>
 </body>
 </html>

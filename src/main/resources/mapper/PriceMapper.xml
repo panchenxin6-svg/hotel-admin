@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pcx.hotel_admin.mapper.PriceMapper">
+    <insert id="upsertPrice" parameterType="map">
+        INSERT INTO room_price (room_type_id, price_date, price)
+        VALUES (#{roomTypeId}, #{date}, #{price})
+        ON DUPLICATE KEY UPDATE price = VALUES(price)
+    </insert>
+    
+    <select id="selectPrices" resultType="map">
+        SELECT price_date AS date, price
+        FROM room_price
+        WHERE room_type_id = #{roomTypeId}
+          AND price_date BETWEEN #{from} AND #{to}
+        ORDER BY price_date
+    </select>
+</mapper>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pcx.hotel_admin.mapper.RevenueMapper">
+    <select id="selectRevenue" resultType="com.pcx.hotel_admin.vo.RevenuePointVO">
+        SELECT
+            DATE(IF(TIME(create_time) &lt; '14:00:00', create_time - INTERVAL 1 DAY, create_time)) AS date,
+            COALESCE(SUM(total_amount), 0) AS revenue
+        FROM booking
+        WHERE create_time &gt;= #{from}
+          AND create_time &lt; #{to}
+        GROUP BY DATE(IF(TIME(create_time) &lt; '14:00:00', create_time - INTERVAL 1 DAY, create_time))
+        ORDER BY date
+    </select>
+</mapper>
