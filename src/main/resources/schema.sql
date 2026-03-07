@@ -162,3 +162,33 @@ CREATE TABLE IF NOT EXISTS task (
   KEY idx_assigned_to (assigned_to),
   KEY idx_created_by (created_by)
 );
+
+-- Stay Table
+CREATE TABLE IF NOT EXISTS stay (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  room_id BIGINT NOT NULL,
+  channel_id BIGINT NULL,
+  check_in_at DATETIME NOT NULL,
+  expected_check_out_at DATETIME NOT NULL,
+  check_out_at DATETIME NULL,
+  status TINYINT NOT NULL DEFAULT 1, -- 1在住 2已退房
+  remark VARCHAR(255) NULL,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_stay_room_status (room_id, status),
+  KEY idx_stay_exp_out (expected_check_out_at)
+);
+
+-- Stay Guest Table
+CREATE TABLE IF NOT EXISTS stay_guest (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  stay_id BIGINT NOT NULL,
+  name VARCHAR(50) NOT NULL,
+  gender TINYINT NOT NULL, -- 0女 1男
+  id_card VARCHAR(18) NOT NULL,
+  is_main TINYINT NOT NULL DEFAULT 1,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_guest_stay (stay_id),
+  KEY idx_guest_idcard (id_card),
+  KEY idx_guest_name (name)
+);

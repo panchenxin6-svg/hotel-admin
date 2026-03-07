@@ -38,6 +38,13 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public TaskVO assign(Long id, TaskAssignDTO dto) {
+        TaskVO task = taskMapper.selectById(id);
+        if (task == null) {
+            throw new RuntimeException("任务不存在");
+        }
+        if (task.getStatus() != 0) {
+            throw new RuntimeException("只能指派待处理状态的任务");
+        }
         taskMapper.updateAssign(id, dto.getAssignedTo());
         return taskMapper.selectById(id);
     }
@@ -49,6 +56,9 @@ public class TaskServiceImpl implements TaskService {
         if (task == null) {
             throw new RuntimeException("任务不存在");
         }
+        if (task.getStatus() != 1) {
+            throw new RuntimeException("只能处理处理中的任务");
+        }
         if (!isAdmin && !username.equals(task.getAssignedTo())) {
             throw new RuntimeException("只有负责人可以完成");
         }
@@ -58,6 +68,13 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public TaskVO approve(Long id, String username) {
+        TaskVO task = taskMapper.selectById(id);
+        if (task == null) {
+            throw new RuntimeException("任务不存在");
+        }
+        if (task.getStatus() != 2) {
+            throw new RuntimeException("只能确认已完成的任务");
+        }
         taskMapper.updateApprove(id, username);
         return taskMapper.selectById(id);
     }

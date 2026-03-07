@@ -79,6 +79,9 @@
         <aside class="sidebar">
           <h3>筛选条件</h3>
           <el-form label-width="80px">
+            <el-form-item label="关键字">
+              <el-input v-model="filters.q" placeholder="姓名/身份证/房号" clearable></el-input>
+            </el-form-item>
             <el-form-item label="房态">
               <el-select v-model="filters.status" placeholder="全部" clearable>
                 <el-option label="空房" :value="0"></el-option>
@@ -100,6 +103,10 @@
             <el-form-item label="日期">
               <el-date-picker v-model="filters.date" type="date" placeholder="选择日期"></el-date-picker>
             </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="loadDashboard">搜索</el-button>
+              <el-button @click="filters.q='';loadDashboard()">清空</el-button>
+            </el-form-item>
           </el-form>
         </aside>
 
@@ -116,9 +123,10 @@
                 <p><strong>价格：</strong>¥{{ room.todayPrice }}</p>
                 <p v-if="room.isHourly"><el-tag type="warning" size="small">钟点房</el-tag></p>
               </div>
-              <div class="room-time" v-if="room.status === 1">
-                <p>入住：{{ room.checkInTime }}</p>
-                <p>退房：{{ room.checkOutTime }}</p>
+              <div class="room-time" v-if="room.status === 1 && room.guestName">
+                <p>住客：{{ room.guestName }}</p>
+                <p>入住：{{ fmt(room.checkInAt) }}</p>
+                <p :style="isUrgent(room.expectedCheckOutAt) ? 'color:red;font-weight:bold;' : ''">预计退房：{{ fmt(room.expectedCheckOutAt) }}</p>
               </div>
               <div class="room-demand" v-if="room.demandCount > 0">
                 <el-badge :value="room.demandCount" type="danger">需求</el-badge>
@@ -129,13 +137,67 @@
       </div>
 
       <!-- 统计报表页 -->
-      <div v-if="activePage === 'stats'" style="padding:20px;color:#666;">
-        TODO: 统计报表（渠道/价格趋势/营业额趋势）
+      <div v-if="activePage === 'stats'" style="padding:20px;">
+        <h3>统计报表</h3>
+        <el-row :gutter="16" style="margin-top:20px;">
+          <el-col :span="24">
+            <el-card>
+              <template #header>
+                <div>营业额趋势（最近7天）</div>
+              </template>
+              <div id="statsRevChart" style="height:300px;"></div>
+            </el-card>
+          </el-col>
+        </el-row>
       </div>
 
       <!-- 用户管理页 -->
-      <div v-if="activePage === 'users'" style="padding:20px;color:#666;">
-        TODO: 用户管理
+      <div v-if="activePage === 'users'" style="padding:20px;">
+        <div style="margin-bottom:16px;">
+          <el-button type="primary" @click="openAddUser">新增用户</el-button>
+        </div>
+        <el-table :data="users" v-loading="usersLoading" border>
+          <el-table-column prop="id" label="ID" width="60"></el-table-column>
+          <el-table-column prop="username" label="用户名"></el-table-column>
+          <el-table-column prop="role" label="角色">
+            <template #default="{row}">
+              <el-tag :type="row.role === 'SUPER_ADMIN' ? 'danger' : row.role === 'ADMIN' ? 'warning' : 'info'">
+                {{ row.role }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="active" label="状态">
+            <template #default="{row}">
+              <el-tag :type="row.active === 1 ? 'success' : 'danger'">
+                {{ row.active === 1 ? '启用' : '禁用' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="createTime" label="创建时间"></el-table-column>
+        </el-table>
+
+        <!-- 新增用户弹窗 -->
+        <el-dialog v-model="userFormVisible" title="新增用户" width="400px">
+          <el-form :model="userForm" label-width="80px">
+            <el-form-item label="用户名" required>
+              <el-input v-model="userForm.username" placeholder="请输入用户名"></el-input>
+            </el-form-item>
+            <el-form-item label="密码" required>
+              <el-input v-model="userForm.password" type="password" placeholder="请输入密码"></el-input>
+            </el-form-item>
+            <el-form-item label="角色" required>
+              <el-select v-model="userForm.role">
+                <el-option label="普通用户" value="USER"></el-option>
+                <el-option label="管理员" value="ADMIN"></el-option>
+                <el-option label="超级管理员" value="SUPER_ADMIN"></el-option>
+              </el-select>
+            </el-form-item>
+          </el-form>
+          <template #footer>
+            <el-button @click="userFormVisible = false">取消</el-button>
+            <el-button type="primary" @click="saveUser">确定</el-button>
+          </template>
+        </el-dialog>
       </div>
 
       <!-- 右侧抽屉 -->
@@ -152,12 +214,14 @@
           </el-descriptions>
 
           <el-divider>当前住客信息</el-divider>
-          <div class="guest-info">
-            <p><strong>姓名：</strong>张三</p>
-            <p><strong>电话：</strong>138****8888</p>
-            <p><strong>入住时间：</strong>2024-01-15 14:00</p>
-            <p><strong>预计退房：</strong>2024-01-16 12:00</p>
+          <div class="guest-info" v-if="currentRoom.status === 1 && currentRoom.guestName">
+            <p><strong>姓名：</strong>{{ currentRoom.guestName }}</p>
+            <p><strong>身份证：</strong>{{ currentRoom.guestIdCard || '-' }}</p>
+            <p><strong>入住时间：</strong>{{ fmt(currentRoom.checkInAt) }}</p>
+            <p><strong>预计退房：</strong>{{ fmt(currentRoom.expectedCheckOutAt) }}</p>
+            <p><strong>渠道：</strong>{{ currentRoom.channelName || '-' }}</p>
           </div>
+          <div v-else style="color:#999;font-size:13px;">暂无入住信息</div>
 
           <el-divider>今日需求日志</el-divider>
           <el-timeline v-if="reqList.length">
@@ -172,12 +236,46 @@
 
           <el-divider>操作</el-divider>
           <div class="drawer-actions">
-            <el-button type="info" @click="markClean">标记待清洁</el-button>
-            <el-button type="success" @click="markEmpty">标记空房</el-button>
+            <!-- 空房：显示入住按钮 -->
+            <el-button v-if="currentRoom.status === 0" type="primary" @click="openCheckIn">入住</el-button>
+            <!-- 已入住：显示退房按钮 -->
+            <el-button v-if="currentRoom.status === 1" type="warning" @click="handleCheckOut">退房</el-button>
+            <!-- 待清洁：显示标记空房按钮 -->
+            <el-button v-if="currentRoom.status === 2" type="success" @click="markEmpty">标记空房</el-button>
+            <!-- 所有状态都可以标记待清洁（除了已退房的） -->
+            <el-button v-if="currentRoom.status !== 2" type="info" @click="markClean">标记待清洁</el-button>
             <el-button type="primary" @click="addDemand">新增需求</el-button>
           </div>
         </div>
       </el-drawer>
+
+      <!-- 入住弹窗 -->
+      <el-dialog v-model="checkInVisible" title="办理入住" width="400px">
+        <el-form :model="checkInForm" label-width="80px">
+          <el-form-item label="姓名" required>
+            <el-input v-model="checkInForm.name" placeholder="请输入姓名"></el-input>
+          </el-form-item>
+          <el-form-item label="性别" required>
+            <el-radio-group v-model="checkInForm.gender">
+              <el-radio :label="1">男</el-radio>
+              <el-radio :label="0">女</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="身份证" required>
+            <el-input v-model="checkInForm.idCard" placeholder="请输入身份证号"></el-input>
+          </el-form-item>
+          <el-form-item label="备注">
+            <el-input v-model="checkInForm.remark" type="textarea" placeholder="可选备注"></el-input>
+          </el-form-item>
+          <el-form-item label="预计退房">
+            <el-date-picker v-model="checkInForm.expectedCheckOutAt" type="datetime" placeholder="默认次日14:00"></el-date-picker>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="checkInVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleCheckIn">确定入住</el-button>
+        </template>
+      </el-dialog>
     </div>
   </div>
 

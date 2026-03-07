@@ -15,8 +15,8 @@ public class RoomDashServiceImpl implements RoomDashService {
     private RoomDashMapper roomDashMapper;
 
     @Override
-    public List<RoomDashVO> dashboard(LocalDate date) {
-        return roomDashMapper.selectDashboard(date);
+    public List<RoomDashVO> dashboard(LocalDate date, String q) {
+        return roomDashMapper.selectDashboard(date, q);
     }
 
     @Override

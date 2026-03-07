@@ -17,8 +17,14 @@ public class RevenueController {
 
     @GetMapping("/revenue")
     public Result<List<RevenuePointVO>> getRevenue(
-            @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+            @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(value = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        if (from == null) {
+            from = LocalDate.now().minusDays(6);
+        }
+        if (to == null) {
+            to = LocalDate.now();
+        }
         return Result.success(revenueService.getRevenue(from, to));
     }
 }

@@ -54,13 +54,14 @@
     </update>
 
     <select id="selectById" resultType="com.pcx.hotel_admin.vo.TaskVO">
-        SELECT id, room_id AS roomId, title, content, status,
-               created_by AS createdBy, created_at AS createdAt,
-               assigned_to AS assignedTo, assigned_at AS assignedAt,
-               done_by AS doneBy, done_at AS doneAt,
-               approved_by AS approvedBy, approved_at AS approvedAt
-        FROM task
-        WHERE id = #{id}
+        SELECT t.id, t.room_id AS roomId, r.room_no AS roomNo, t.title, t.content, t.status,
+               t.created_by AS createdBy, t.created_at AS createdAt,
+               t.assigned_to AS assignedTo, t.assigned_at AS assignedAt,
+               t.done_by AS doneBy, t.done_at AS doneAt,
+               t.approved_by AS approvedBy, t.approved_at AS approvedAt
+        FROM task t
+        LEFT JOIN room r ON r.id = t.room_id
+        WHERE t.id = #{id}
     </select>
 
 </mapper>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pcx.hotel_admin.mapper.StayMapper">
+
+    <insert id="insertStay" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO stay (room_id, channel_id, check_in_at, expected_check_out_at, status, remark)
+        VALUES (#{roomId}, #{channelId}, #{checkInAt}, #{expectedCheckOutAt}, 1, #{remark})
+    </insert>
+
+    <insert id="insertGuest">
+        INSERT INTO stay_guest (stay_id, name, gender, id_card, is_main)
+        VALUES (#{stayId}, #{name}, #{gender}, #{idCard}, #{isMain})
+    </insert>
+
+    <select id="selectActiveStayByRoomId" resultType="com.pcx.hotel_admin.entity.Stay">
+        SELECT id, room_id AS roomId, channel_id AS channelId,
+               check_in_at AS checkInAt, expected_check_out_at AS expectedCheckOutAt,
+               check_out_at AS checkOutAt, status, remark
+        FROM stay
+        WHERE room_id = #{roomId} AND status = 1
+        LIMIT 1
+    </select>
+
+    <update id="checkoutStay">
+        UPDATE stay SET status = 2, check_out_at = NOW() WHERE id = #{id}
+    </update>
+
+</mapper>

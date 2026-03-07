@@ -11,7 +11,12 @@
           r.room_type_id AS roomTypeId,
           rt.type_name AS roomTypeName,
           COALESCE(rp.price, rt.price) AS todayPrice,
-          COALESCE(req.cnt, 0) AS demandCount
+          COALESCE(req.cnt, 0) AS demandCount,
+          g.name AS guestName,
+          g.id_card AS guestIdCard,
+          s.check_in_at AS checkInAt,
+          s.expected_check_out_at AS expectedCheckOutAt,
+          c.channel_name AS channelName
         FROM room r
         LEFT JOIN room_type rt ON rt.id = r.room_type_id
         LEFT JOIN room_price rp ON rp.room_type_id = r.room_type_id AND rp.price_date = #{date}
@@ -21,7 +26,17 @@
           WHERE req_date = #{date}
           GROUP BY room_id
         ) req ON req.room_id = r.id
+        LEFT JOIN stay s ON s.room_id = r.id AND s.status = 1
+        LEFT JOIN stay_guest g ON g.stay_id = s.id AND g.is_main = 1
+        LEFT JOIN channel c ON c.id = s.channel_id
         WHERE r.active = 1
+        <if test="q != null and q != ''">
+          AND (
+            r.room_no LIKE CONCAT('%', #{q}, '%')
+            OR IFNULL(g.name, '') LIKE CONCAT('%', #{q}, '%')
+            OR IFNULL(g.id_card, '') LIKE CONCAT('%', #{q}, '%')
+          )
+        </if>
         ORDER BY r.room_no
     </select>
 
@@ -42,5 +57,16 @@
         WHERE room_id = #{roomId} AND req_date = #{date}
         ORDER BY create_time DESC
     </select>
+
+    <!-- Status transition constraints -->
+    <update id="occupyRoom">
+        UPDATE room SET status = 1, update_time = NOW()
+        WHERE id = #{id} AND status = 0 AND active = 1
+    </update>
+
+    <update id="checkoutToClean">
+        UPDATE room SET status = 2, update_time = NOW()
+        WHERE id = #{id} AND status = 1 AND active = 1
+    </update>
 
 </mapper>

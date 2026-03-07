@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface RoomDashService {
     
-    List<RoomDashVO> dashboard(LocalDate date);
+    List<RoomDashVO> dashboard(LocalDate date, String q);
     
     void updateStatus(Long id, Integer status);
     
