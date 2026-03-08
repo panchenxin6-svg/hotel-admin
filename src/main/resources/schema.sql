@@ -149,15 +149,14 @@ CREATE TABLE IF NOT EXISTS task (
   room_id BIGINT,
   title VARCHAR(100) NOT NULL,
   content TEXT,
-  status TINYINT NOT NULL DEFAULT 0 COMMENT '0-待处理 1-处理中 2-已完成待确认 3-已确认',
+  remark VARCHAR(255),
+  status TINYINT NOT NULL DEFAULT 0 COMMENT '0-待处理 1-处理中 2-已完成',
   created_by VARCHAR(50) NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   assigned_to VARCHAR(50),
   assigned_at DATETIME,
   done_by VARCHAR(50),
   done_at DATETIME,
-  approved_by VARCHAR(50),
-  approved_at DATETIME,
   KEY idx_status (status),
   KEY idx_assigned_to (assigned_to),
   KEY idx_created_by (created_by)
@@ -173,6 +172,7 @@ CREATE TABLE IF NOT EXISTS stay (
   check_out_at DATETIME NULL,
   status TINYINT NOT NULL DEFAULT 1, -- 1在住 2已退房
   remark VARCHAR(255) NULL,
+  active TINYINT DEFAULT 1,
   create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   KEY idx_stay_room_status (room_id, status),
@@ -187,6 +187,7 @@ CREATE TABLE IF NOT EXISTS stay_guest (
   gender TINYINT NOT NULL, -- 0女 1男
   id_card VARCHAR(18) NOT NULL,
   is_main TINYINT NOT NULL DEFAULT 1,
+  active TINYINT DEFAULT 1,
   create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_guest_stay (stay_id),
   KEY idx_guest_idcard (id_card),

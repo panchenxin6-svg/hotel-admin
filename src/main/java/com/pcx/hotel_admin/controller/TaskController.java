@@ -68,17 +68,6 @@ public class TaskController {
         return Result.success(task);
     }
 
-    /**
-     * 确认任务 - 仅 ADMIN+
-     */
-    @PatchMapping("/{id}/approve")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
-    public Result<TaskVO> approve(@PathVariable Long id) {
-        String username = getCurrentUsername();
-        TaskVO task = taskService.approve(id, username);
-        return Result.success(task);
-    }
-
     private String getCurrentUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null ? auth.getName() : null;

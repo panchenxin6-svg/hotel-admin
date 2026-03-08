@@ -13,6 +13,4 @@ public interface TaskService {
     TaskVO assign(Long id, TaskAssignDTO dto);
     
     TaskVO done(Long id, String username, boolean isAdmin);
-    
-    TaskVO approve(Long id, String username);
 }

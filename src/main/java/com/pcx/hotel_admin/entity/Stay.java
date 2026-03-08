@@ -13,6 +13,7 @@ public class Stay {
     private LocalDateTime checkOutAt;
     private Integer status; // 1-在住 2-已退房
     private String remark;
+    private Integer active;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

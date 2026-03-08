@@ -10,6 +10,7 @@ public class TaskVO {
     private String roomNo;
     private String title;
     private String content;
+    private String remark;
     private Integer status;
     private String createdBy;
     private LocalDateTime createdAt;
@@ -17,6 +18,4 @@ public class TaskVO {
     private LocalDateTime assignedAt;
     private String doneBy;
     private LocalDateTime doneAt;
-    private String approvedBy;
-    private LocalDateTime approvedAt;
 }

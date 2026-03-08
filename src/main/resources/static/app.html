@@ -44,6 +44,7 @@
       <el-tabs v-model="activePage" style="background:#fff;padding:0 20px;">
         <el-tab-pane label="首页" name="home"></el-tab-pane>
         <el-tab-pane label="房间看板" name="rooms"></el-tab-pane>
+        <el-tab-pane label="工单管理" name="tasks"></el-tab-pane>
         <el-tab-pane label="统计报表" name="stats"></el-tab-pane>
         <el-tab-pane v-if="isAdmin" label="用户管理" name="users"></el-tab-pane>
       </el-tabs>
@@ -151,6 +152,54 @@
         </el-row>
       </div>
 
+      <!-- 工单管理页 -->
+      <div v-if="activePage === 'tasks'" style="padding:20px;">
+        <div style="margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <el-select v-model="taskFilter.status" placeholder="工单状态" clearable style="width:120px;">
+            <el-option label="待处理" :value="0"></el-option>
+            <el-option label="进行中" :value="1"></el-option>
+            <el-option label="已完成" :value="2"></el-option>
+          </el-select>
+          <el-button type="primary" @click="loadTasks">查询</el-button>
+          <el-button type="success" @click="openAddTask">新建工单</el-button>
+        </div>
+        <el-table :data="taskList" border v-loading="taskLoading">
+          <el-table-column prop="id" label="ID" width="60"></el-table-column>
+          <el-table-column prop="roomNo" label="房号" width="80">
+            <template #default="{row}">{{ row.roomNo || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="title" label="工单标题" width="150"></el-table-column>
+          <el-table-column prop="content" label="需求内容" min-width="150"></el-table-column>
+          <el-table-column prop="remark" label="备注" width="150"></el-table-column>
+          <el-table-column prop="status" label="状态" width="100">
+            <template #default="{row}">
+              <el-tag :type="getTaskStatusType(row.status)">
+                {{ getTaskStatusText(row.status) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="createdBy" label="创建人" width="80"></el-table-column>
+          <el-table-column prop="createdAt" label="创建时间" width="160">
+            <template #default="{row}">{{ fmt(row.createdAt) }}</template>
+          </el-table-column>
+          <el-table-column prop="assignedTo" label="执行人" width="80">
+            <template #default="{row}">{{ row.assignedTo || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="doneBy" label="完成人" width="80">
+            <template #default="{row}">{{ row.doneBy || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="doneAt" label="完成时间" width="160">
+            <template #default="{row}">{{ row.doneAt ? fmt(row.doneAt) : '-' }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="200" fixed="right">
+            <template #default="{row}">
+              <el-button v-if="isAdmin && row.status === 0" size="small" type="warning" @click="openAssignTask(row)">指派</el-button>
+              <el-button v-if="row.status === 1" size="small" type="success" @click="finishTask(row)">完成</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
       <!-- 用户管理页 -->
       <div v-if="activePage === 'users'" style="padding:20px;">
         <div style="margin-bottom:16px;">
@@ -214,12 +263,31 @@
           </el-descriptions>
 
           <el-divider>当前住客信息</el-divider>
-          <div class="guest-info" v-if="currentRoom.status === 1 && currentRoom.guestName">
-            <p><strong>姓名：</strong>{{ currentRoom.guestName }}</p>
-            <p><strong>身份证：</strong>{{ currentRoom.guestIdCard || '-' }}</p>
-            <p><strong>入住时间：</strong>{{ fmt(currentRoom.checkInAt) }}</p>
-            <p><strong>预计退房：</strong>{{ fmt(currentRoom.expectedCheckOutAt) }}</p>
-            <p><strong>渠道：</strong>{{ currentRoom.channelName || '-' }}</p>
+          <div class="guest-info" v-if="currentRoom.status === 1 && guestList.length">
+            <el-table :data="guestList" size="small" border>
+              <el-table-column prop="name" label="姓名"></el-table-column>
+              <el-table-column prop="gender" label="性别" width="60">
+                <template #default="scope">
+                  {{ scope.row.gender === 1 ? '男' : '女' }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="idCard" label="身份证号">
+                <template #default="scope">
+                  {{ maskIdCard(scope.row.idCard) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="isMain" label="主客" width="60">
+                <template #default="scope">
+                  <el-tag v-if="scope.row.isMain === 1" type="danger" size="small">主客</el-tag>
+                  <span v-else>同住</span>
+                </template>
+              </el-table-column>
+            </el-table>
+            <div style="margin-top:10px;">
+              <p><strong>入住时间：</strong>{{ fmt(currentRoom.checkInAt) }}</p>
+              <p><strong>预计退房：</strong>{{ fmt(currentRoom.expectedCheckOutAt) }}</p>
+              <p><strong>渠道：</strong>{{ currentRoom.channelName || '-' }}</p>
+            </div>
           </div>
           <div v-else style="color:#999;font-size:13px;">暂无入住信息</div>
 
@@ -250,20 +318,44 @@
       </el-drawer>
 
       <!-- 入住弹窗 -->
-      <el-dialog v-model="checkInVisible" title="办理入住" width="400px">
+      <el-dialog v-model="checkInVisible" title="办理入住" width="500px">
         <el-form :model="checkInForm" label-width="80px">
+          <el-form-item label="入住人数" required>
+            <el-input-number v-model="checkInForm.guestCount" :min="1" :max="10" @change="onGuestCountChange"></el-input-number>
+          </el-form-item>
+          <el-divider>主客信息（必填）</el-divider>
           <el-form-item label="姓名" required>
-            <el-input v-model="checkInForm.name" placeholder="请输入姓名"></el-input>
+            <el-input v-model="checkInForm.mainGuestName" placeholder="请输入姓名"></el-input>
           </el-form-item>
           <el-form-item label="性别" required>
-            <el-radio-group v-model="checkInForm.gender">
+            <el-radio-group v-model="checkInForm.mainGuestGender">
               <el-radio :label="1">男</el-radio>
               <el-radio :label="0">女</el-radio>
             </el-radio-group>
           </el-form-item>
           <el-form-item label="身份证" required>
-            <el-input v-model="checkInForm.idCard" placeholder="请输入身份证号"></el-input>
+            <el-input v-model="checkInForm.mainGuestIdCard" placeholder="请输入身份证号"></el-input>
           </el-form-item>
+          
+          <!-- 其他入住人 -->
+          <template v-if="checkInForm.guestCount > 1">
+            <el-divider>其他入住人</el-divider>
+            <div v-for="(guest, index) in checkInForm.otherGuests" :key="index" class="other-guest-item">
+              <el-form-item :label="'姓名' + (index + 2)">
+                <el-input v-model="guest.name" placeholder="请输入姓名"></el-input>
+              </el-form-item>
+              <el-form-item :label="'性别' + (index + 2)">
+                <el-radio-group v-model="guest.gender">
+                  <el-radio :label="1">男</el-radio>
+                  <el-radio :label="0">女</el-radio>
+                </el-radio-group>
+              </el-form-item>
+              <el-form-item :label="'身份证' + (index + 2)">
+                <el-input v-model="guest.idCard" placeholder="请输入身份证号"></el-input>
+              </el-form-item>
+            </div>
+          </template>
+          
           <el-form-item label="备注">
             <el-input v-model="checkInForm.remark" type="textarea" placeholder="可选备注"></el-input>
           </el-form-item>
@@ -274,6 +366,45 @@
         <template #footer>
           <el-button @click="checkInVisible = false">取消</el-button>
           <el-button type="primary" @click="handleCheckIn">确定入住</el-button>
+        </template>
+      </el-dialog>
+
+      <!-- 新建工单弹窗 -->
+      <el-dialog v-model="taskFormVisible" title="新建工单" width="450px">
+        <el-form :model="taskForm" label-width="80px">
+          <el-form-item label="房间">
+            <el-select v-model="taskForm.roomId" placeholder="选择房间" clearable style="width:100%;">
+              <el-option v-for="r in rooms" :key="r.id" :label="r.no" :value="r.id"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="标题" required>
+            <el-input v-model="taskForm.title" placeholder="请输入工单标题"></el-input>
+          </el-form-item>
+          <el-form-item label="需求内容" required>
+            <el-input v-model="taskForm.content" type="textarea" rows="3" placeholder="请输入需求内容"></el-input>
+          </el-form-item>
+          <el-form-item label="备注">
+            <el-input v-model="taskForm.remark" type="textarea" rows="2" placeholder="可选备注"></el-input>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="taskFormVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleAddTask">确定</el-button>
+        </template>
+      </el-dialog>
+
+      <!-- 指派工单弹窗 -->
+      <el-dialog v-model="taskAssignVisible" title="指派工单" width="400px">
+        <el-form label-width="80px">
+          <el-form-item label="执行人">
+            <el-select v-model="taskAssignForm.assignedTo" placeholder="选择执行人" style="width:100%;">
+              <el-option v-for="u in users" :key="u.username" :label="u.username" :value="u.username"></el-option>
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="taskAssignVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleAssignTask">确定指派</el-button>
         </template>
       </el-dialog>
     </div>

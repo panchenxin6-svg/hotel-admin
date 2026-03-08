@@ -46,13 +46,18 @@ const app = createApp({
     const drawerTitle = ref('');
     const currentRoom = ref({});
     const reqList = ref([]);
+    
+    // 住客列表
+    const guestList = ref([]);
 
     // 入住弹窗
     const checkInVisible = ref(false);
     const checkInForm = reactive({
-      name: '',
-      gender: 1,
-      idCard: '',
+      guestCount: 1,
+      mainGuestName: '',
+      mainGuestGender: 1,
+      mainGuestIdCard: '',
+      otherGuests: [],
       remark: '',
       expectedCheckOutAt: null
     });
@@ -75,6 +80,23 @@ const app = createApp({
       role: 'USER'
     });
     const editingUserId = ref(null);
+
+    // 工单相关数据
+    const taskLoading = ref(false);
+    const taskList = ref([]);
+    const taskFilter = reactive({ status: null });
+    const taskFormVisible = ref(false);
+    const taskForm = reactive({
+      roomId: null,
+      title: '',
+      content: '',
+      remark: ''
+    });
+    const taskAssignVisible = ref(false);
+    const taskAssignForm = reactive({
+      id: null,
+      assignedTo: ''
+    });
 
     // 格式化日期
     const formatDate = (d) => {
@@ -118,6 +140,27 @@ const app = createApp({
     const formatTs = (dtStr) => {
       if (!dtStr) return '';
       return dtStr.substring(11, 16);
+    };
+    
+    // 身份证号脱敏
+    const maskIdCard = (idCard) => {
+      if (!idCard || idCard.length < 8) return idCard;
+      return idCard.substring(0, 4) + '********' + idCard.substring(idCard.length - 4);
+    };
+    
+    // 入住人数变化时调整表单
+    const onGuestCountChange = (count) => {
+      const currentLen = checkInForm.otherGuests.length;
+      if (count > 1) {
+        // 添加或删除其他入住人
+        if (count - 1 > currentLen) {
+          for (let i = currentLen; i < count - 1; i++) {
+            checkInForm.otherGuests.push({ name: '', gender: 1, idCard: '' });
+          }
+        } else if (count - 1 < currentLen) {
+          checkInForm.otherGuests.splice(count - 1);
+        }
+      }
     };
 
     // 计算 KPI
@@ -371,8 +414,147 @@ const app = createApp({
 
     // 用户管理（占位）
     const openUserAdmin = () => {
-      ElementPlus.ElMessage.info("TODO: 用户管理");
+      activePage.value = 'users';
+      loadUsers();
     };
+
+    // 加载工单列表
+    const loadTasks = async () => {
+      taskLoading.value = true;
+      try {
+        let url = '/api/tasks';
+        const params = [];
+        if (taskFilter.status !== null && taskFilter.status !== '') {
+          params.push(`status=${taskFilter.status}`);
+        }
+        if (params.length > 0) {
+          url += '?' + params.join('&');
+        }
+        const resp = await fetch(url, { credentials: 'same-origin' });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.code === 200) {
+            taskList.value = data.data || [];
+          }
+        }
+      } catch (e) {
+        console.error('加载工单失败', e);
+      } finally {
+        taskLoading.value = false;
+      }
+    };
+
+    // 打开新建工单弹窗
+    const openAddTask = () => {
+      taskForm.roomId = null;
+      taskForm.title = '';
+      taskForm.content = '';
+      taskForm.remark = '';
+      taskFormVisible.value = true;
+    };
+
+    // 创建工单
+    const handleAddTask = async () => {
+      if (!taskForm.title || !taskForm.content) {
+        ElementPlus.ElMessage.warning('请填写标题和需求内容');
+        return;
+      }
+      try {
+        const resp = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(taskForm),
+          credentials: 'same-origin'
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.code === 200) {
+            taskFormVisible.value = false;
+            await loadTasks();
+            ElementPlus.ElMessage.success('工单创建成功');
+          } else {
+            ElementPlus.ElMessage.error(data.message || '创建失败');
+          }
+        }
+      } catch (e) {
+        ElementPlus.ElMessage.error('创建失败');
+      }
+    };
+
+    // 打开指派弹窗
+    const openAssignTask = (task) => {
+      taskAssignForm.id = task.id;
+      taskAssignForm.assignedTo = '';
+      taskAssignVisible.value = true;
+    };
+
+    // 指派工单
+    const handleAssignTask = async () => {
+      if (!taskAssignForm.assignedTo) {
+        ElementPlus.ElMessage.warning('请选择执行人');
+        return;
+      }
+      try {
+        const resp = await fetch(`/api/tasks/${taskAssignForm.id}/assign`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ assignedTo: taskAssignForm.assignedTo }),
+          credentials: 'same-origin'
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.code === 200) {
+            taskAssignVisible.value = false;
+            await loadTasks();
+            ElementPlus.ElMessage.success('指派成功');
+          } else {
+            ElementPlus.ElMessage.error(data.message || '指派失败');
+          }
+        }
+      } catch (e) {
+        ElementPlus.ElMessage.error('指派失败');
+      }
+    };
+
+    // 完成任务
+    const finishTask = async (task) => {
+      try {
+        const resp = await fetch(`/api/tasks/${task.id}/done`, {
+          method: 'PATCH',
+          credentials: 'same-origin'
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.code === 200) {
+            await loadTasks();
+            ElementPlus.ElMessage.success('已完成');
+          } else {
+            ElementPlus.ElMessage.error(data.message || '操作失败');
+          }
+        }
+      } catch (e) {
+        ElementPlus.ElMessage.error('操作失败');
+      }
+    };
+
+    // 获取工单状态文本
+    const getTaskStatusText = (status) => {
+      const map = { 0: '待处理', 1: '进行中', 2: '已完成' };
+      return map[status] || '未知';
+    };
+
+    // 获取工单状态标签类型
+    const getTaskStatusType = (status) => {
+      const map = { 0: 'info', 1: 'warning', 2: 'success' };
+      return map[status] || 'info';
+    };
+
+    // 监听页面切换
+    watch(activePage, (newVal) => {
+      if (newVal === 'tasks') {
+        loadTasks();
+      }
+    });
 
     // 获取状态文本
     const getStatusText = (status) => {
@@ -392,6 +574,25 @@ const app = createApp({
       drawerTitle.value = `房间 ${room.no} - 详情`;
       drawerVisible.value = true;
       await loadReqs(room.id);
+      await loadGuests(room.id);
+    };
+    
+    // 加载住客列表
+    const loadGuests = async (roomId) => {
+      try {
+        const resp = await fetch(`/api/rooms/${roomId}/guests`, {
+          credentials: 'same-origin'
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.code === 200) {
+            guestList.value = data.data || [];
+          }
+        }
+      } catch (e) {
+        console.error('加载住客失败', e);
+        guestList.value = [];
+      }
     };
 
     // 标记待清洁
@@ -458,9 +659,11 @@ const app = createApp({
 
     // 打开入住弹窗
     const openCheckIn = () => {
-      checkInForm.name = '';
-      checkInForm.gender = 1;
-      checkInForm.idCard = '';
+      checkInForm.guestCount = 1;
+      checkInForm.mainGuestName = '';
+      checkInForm.mainGuestGender = 1;
+      checkInForm.mainGuestIdCard = '';
+      checkInForm.otherGuests = [];
       checkInForm.remark = '';
       checkInForm.expectedCheckOutAt = null;
       checkInVisible.value = true;
@@ -468,15 +671,27 @@ const app = createApp({
 
     // 办理入住
     const handleCheckIn = async () => {
-      if (!checkInForm.name || !checkInForm.idCard) {
-        ElementPlus.ElMessage.warning('请填写姓名和身份证');
+      if (!checkInForm.mainGuestName || !checkInForm.mainGuestIdCard) {
+        ElementPlus.ElMessage.warning('请填写主客姓名和身份证');
         return;
+      }
+      // 验证其他入住人
+      if (checkInForm.guestCount > 1) {
+        for (let i = 0; i < checkInForm.otherGuests.length; i++) {
+          const g = checkInForm.otherGuests[i];
+          if (!g.name || !g.idCard) {
+            ElementPlus.ElMessage.warning('请填写第' + (i + 2) + '位入住人的信息');
+            return;
+          }
+        }
       }
       try {
         const body = {
-          name: checkInForm.name,
-          gender: checkInForm.gender,
-          idCard: checkInForm.idCard,
+          guestCount: checkInForm.guestCount,
+          mainGuestName: checkInForm.mainGuestName,
+          mainGuestGender: checkInForm.mainGuestGender,
+          mainGuestIdCard: checkInForm.mainGuestIdCard,
+          otherGuests: checkInForm.otherGuests,
           remark: checkInForm.remark
         };
         if (checkInForm.expectedCheckOutAt) {
@@ -703,6 +918,7 @@ const app = createApp({
       drawerTitle,
       currentRoom,
       reqList,
+      guestList,
       checkInVisible,
       checkInForm,
       statsData,
@@ -711,9 +927,21 @@ const app = createApp({
       usersLoading,
       userFormVisible,
       userForm,
+      // 工单相关
+      taskLoading,
+      taskList,
+      taskFilter,
+      taskFormVisible,
+      taskForm,
+      taskAssignVisible,
+      taskAssignForm,
       formatTs,
       fmt,
+      maskIdCard,
+      onGuestCountChange,
       isUrgent,
+      getTaskStatusText,
+      getTaskStatusType,
       handleLogin,
       handleLogout,
       openUserAdmin,
@@ -730,7 +958,14 @@ const app = createApp({
       loadStats,
       loadUsers,
       saveUser,
-      openAddUser
+      openAddUser,
+      // 工单函数
+      loadTasks,
+      openAddTask,
+      handleAddTask,
+      openAssignTask,
+      handleAssignTask,
+      finishTask
     };
   }
 });

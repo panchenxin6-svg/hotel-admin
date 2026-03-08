@@ -57,6 +57,30 @@ public class AutoDbInitializer implements CommandLineRunner {
             System.err.println("[AutoDbInitializer] stay_guest 表创建失败: " + e.getMessage());
         }
         
+        // 更新 task 表结构
+        try {
+            jdbcTemplate.execute("ALTER TABLE task ADD COLUMN IF NOT EXISTS remark VARCHAR(255)");
+            System.out.println("[AutoDbInitializer] task 表结构更新成功");
+        } catch (Exception e) {
+            System.err.println("[AutoDbInitializer] task 表结构更新: " + e.getMessage());
+        }
+        
+        // 更新 stay_guest 表结构
+        try {
+            jdbcTemplate.execute("ALTER TABLE stay_guest ADD COLUMN IF NOT EXISTS active TINYINT DEFAULT 1");
+            System.out.println("[AutoDbInitializer] stay_guest 表结构更新成功");
+        } catch (Exception e) {
+            System.err.println("[AutoDbInitializer] stay_guest 表结构更新: " + e.getMessage());
+        }
+        
+        // 更新 stay 表结构
+        try {
+            jdbcTemplate.execute("ALTER TABLE stay ADD COLUMN IF NOT EXISTS active TINYINT DEFAULT 1");
+            System.out.println("[AutoDbInitializer] stay 表结构更新成功");
+        } catch (Exception e) {
+            System.err.println("[AutoDbInitializer] stay 表结构更新: " + e.getMessage());
+        }
+        
         System.out.println("[AutoDbInitializer] 数据库初始化完成");
     }
 }

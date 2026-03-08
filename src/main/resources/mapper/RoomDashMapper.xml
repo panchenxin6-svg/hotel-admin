@@ -6,7 +6,6 @@
         SELECT
           r.id,
           r.room_no AS roomNo,
-          r.status,
           r.is_hourly AS isHourly,
           r.room_type_id AS roomTypeId,
           rt.type_name AS roomTypeName,
@@ -16,14 +15,20 @@
           g.id_card AS guestIdCard,
           s.check_in_at AS checkInAt,
           s.expected_check_out_at AS expectedCheckOutAt,
-          c.channel_name AS channelName
+          c.channel_name AS channelName,
+          CASE 
+            WHEN CURDATE() = STR_TO_DATE(#{date}, '%Y-%m-%d') THEN r.status
+            WHEN s.check_in_at IS NOT NULL AND s.check_in_at &lt;= STR_TO_DATE(#{date}, '%Y-%m-%d') + INTERVAL 1 DAY 
+                 AND (s.expected_check_out_at IS NULL OR s.expected_check_out_at &gt; STR_TO_DATE(#{date}, '%Y-%m-%d')) THEN 1
+            ELSE 0
+          END AS status
         FROM room r
         LEFT JOIN room_type rt ON rt.id = r.room_type_id
-        LEFT JOIN room_price rp ON rp.room_type_id = r.room_type_id AND rp.price_date = #{date}
+        LEFT JOIN room_price rp ON rp.room_type_id = r.room_type_id AND rp.price_date = STR_TO_DATE(#{date}, '%Y-%m-%d')
         LEFT JOIN (
           SELECT room_id, COUNT(*) AS cnt
           FROM room_req_log
-          WHERE req_date = #{date}
+          WHERE req_date = STR_TO_DATE(#{date}, '%Y-%m-%d')
           GROUP BY room_id
         ) req ON req.room_id = r.id
         LEFT JOIN stay s ON s.room_id = r.id AND s.status = 1

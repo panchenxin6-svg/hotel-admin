@@ -11,5 +11,6 @@ public class StayGuest {
     private Integer gender; // 0-女 1-男
     private String idCard;
     private Integer isMain; // 1-主住客
+    private Integer active;
     private LocalDateTime createTime;
 }

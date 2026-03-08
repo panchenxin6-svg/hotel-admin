@@ -9,15 +9,14 @@
             r.room_no AS roomNo,
             t.title,
             t.content,
+            t.remark,
             t.status,
             t.created_by AS createdBy,
             t.created_at AS createdAt,
             t.assigned_to AS assignedTo,
             t.assigned_at AS assignedAt,
             t.done_by AS doneBy,
-            t.done_at AS doneAt,
-            t.approved_by AS approvedBy,
-            t.approved_at AS approvedAt
+            t.done_at AS doneAt
         FROM task t
         LEFT JOIN room r ON r.id = t.room_id
         WHERE 1=1
@@ -31,8 +30,8 @@
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO task (room_id, title, content, status, created_by, created_at)
-        VALUES (#{roomId}, #{title}, #{content}, #{status}, #{createdBy}, NOW())
+        INSERT INTO task (room_id, title, content, remark, status, created_by, created_at)
+        VALUES (#{roomId}, #{title}, #{content}, #{remark}, #{status}, #{createdBy}, NOW())
     </insert>
 
     <update id="updateAssign">
@@ -47,18 +46,11 @@
         WHERE id = #{id}
     </update>
 
-    <update id="updateApprove">
-        UPDATE task
-        SET approved_by = #{approvedBy}, approved_at = NOW(), status = 3
-        WHERE id = #{id}
-    </update>
-
     <select id="selectById" resultType="com.pcx.hotel_admin.vo.TaskVO">
-        SELECT t.id, t.room_id AS roomId, r.room_no AS roomNo, t.title, t.content, t.status,
+        SELECT t.id, t.room_id AS roomId, r.room_no AS roomNo, t.title, t.content, t.remark, t.status,
                t.created_by AS createdBy, t.created_at AS createdAt,
                t.assigned_to AS assignedTo, t.assigned_at AS assignedAt,
-               t.done_by AS doneBy, t.done_at AS doneAt,
-               t.approved_by AS approvedBy, t.approved_at AS approvedAt
+               t.done_by AS doneBy, t.done_at AS doneAt
         FROM task t
         LEFT JOIN room r ON r.id = t.room_id
         WHERE t.id = #{id}

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class StayServiceImpl implements StayService {
@@ -47,14 +48,27 @@ public class StayServiceImpl implements StayService {
         stay.setRemark(dto.getRemark());
         stayMapper.insertStay(stay);
         
-        // Insert guest
-        StayGuest guest = new StayGuest();
-        guest.setStayId(stay.getId());
-        guest.setName(dto.getName());
-        guest.setGender(dto.getGender());
-        guest.setIdCard(dto.getIdCard());
-        guest.setIsMain(1);
-        stayMapper.insertGuest(guest);
+        // Insert main guest
+        StayGuest mainGuest = new StayGuest();
+        mainGuest.setStayId(stay.getId());
+        mainGuest.setName(dto.getMainGuestName());
+        mainGuest.setGender(dto.getMainGuestGender());
+        mainGuest.setIdCard(dto.getMainGuestIdCard());
+        mainGuest.setIsMain(1);
+        stayMapper.insertGuest(mainGuest);
+        
+        // Insert other guests
+        if (dto.getOtherGuests() != null && !dto.getOtherGuests().isEmpty()) {
+            for (CheckInDTO.GuestDTO guestDto : dto.getOtherGuests()) {
+                StayGuest guest = new StayGuest();
+                guest.setStayId(stay.getId());
+                guest.setName(guestDto.getName());
+                guest.setGender(guestDto.getGender());
+                guest.setIdCard(guestDto.getIdCard());
+                guest.setIsMain(0);
+                stayMapper.insertGuest(guest);
+            }
+        }
     }
 
     @Override
@@ -74,5 +88,14 @@ public class StayServiceImpl implements StayService {
         if (updated == 0) {
             throw new RuntimeException("房间状态异常，无法退房");
         }
+    }
+
+    @Override
+    public List<StayGuest> getGuestsByRoomId(Long roomId) {
+        Stay stay = stayMapper.selectActiveStayByRoomId(roomId);
+        if (stay == null) {
+            return null;
+        }
+        return stayMapper.selectGuestsByStayId(stay.getId());
     }
 }

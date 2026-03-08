@@ -21,6 +21,7 @@ public class TaskServiceImpl implements TaskService {
         task.setRoomId(dto.getRoomId());
         task.setTitle(dto.getTitle());
         task.setContent(dto.getContent());
+        task.setRemark(dto.getRemark());
         task.setStatus(0); // 待处理
         task.setCreatedBy(username);
         taskMapper.insert(task);
@@ -57,25 +58,12 @@ public class TaskServiceImpl implements TaskService {
             throw new RuntimeException("任务不存在");
         }
         if (task.getStatus() != 1) {
-            throw new RuntimeException("只能处理处理中的任务");
+            throw new RuntimeException("只能处理进行中的任务");
         }
         if (!isAdmin && !username.equals(task.getAssignedTo())) {
             throw new RuntimeException("只有负责人可以完成");
         }
         taskMapper.updateDone(id, username);
-        return taskMapper.selectById(id);
-    }
-
-    @Override
-    public TaskVO approve(Long id, String username) {
-        TaskVO task = taskMapper.selectById(id);
-        if (task == null) {
-            throw new RuntimeException("任务不存在");
-        }
-        if (task.getStatus() != 2) {
-            throw new RuntimeException("只能确认已完成的任务");
-        }
-        taskMapper.updateApprove(id, username);
         return taskMapper.selectById(id);
     }
 }

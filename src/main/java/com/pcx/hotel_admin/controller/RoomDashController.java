@@ -4,12 +4,17 @@ import com.pcx.hotel_admin.common.Result;
 import com.pcx.hotel_admin.dto.CheckInDTO;
 import com.pcx.hotel_admin.dto.RoomReqDTO;
 import com.pcx.hotel_admin.dto.RoomStatusDTO;
+import com.pcx.hotel_admin.dto.TaskDTO;
+import com.pcx.hotel_admin.entity.StayGuest;
 import com.pcx.hotel_admin.service.RoomDashService;
 import com.pcx.hotel_admin.service.StayService;
+import com.pcx.hotel_admin.service.TaskService;
 import com.pcx.hotel_admin.vo.RoomDashVO;
 import com.pcx.hotel_admin.vo.RoomReqVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
@@ -24,6 +29,9 @@ public class RoomDashController {
 
     @Autowired
     private StayService stayService;
+    
+    @Autowired
+    private TaskService taskService;
 
     @GetMapping("/dashboard")
     public Result<List<RoomDashVO>> dashboard(
@@ -51,6 +59,16 @@ public class RoomDashController {
             date = LocalDate.now();
         }
         roomDashService.addReq(id, dto.getContent(), date);
+        
+        // 同时创建工单
+        String username = getCurrentUsername();
+        TaskDTO taskDTO = new TaskDTO();
+        taskDTO.setRoomId(id);
+        taskDTO.setTitle("房间需求");
+        taskDTO.setContent(dto.getContent());
+        taskDTO.setRemark(dto.getContent());
+        taskService.create(taskDTO, username);
+        
         return Result.success();
     }
 
@@ -71,5 +89,17 @@ public class RoomDashController {
     public Result<Void> checkOut(@PathVariable Long id) {
         stayService.checkOut(id);
         return Result.success();
+    }
+
+    // Get all guests for a room
+    @GetMapping("/{id}/guests")
+    public Result<List<StayGuest>> getGuests(@PathVariable Long id) {
+        List<StayGuest> guests = stayService.getGuestsByRoomId(id);
+        return Result.success(guests != null ? guests : List.of());
+    }
+    
+    private String getCurrentUsername() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null ? auth.getName() : null;
     }
 }

@@ -25,4 +25,11 @@
         UPDATE stay SET status = 2, check_out_at = NOW() WHERE id = #{id}
     </update>
 
+    <select id="selectGuestsByStayId" resultType="com.pcx.hotel_admin.entity.StayGuest">
+        SELECT id, stay_id AS stayId, name, gender, id_card AS idCard, is_main AS isMain, create_time AS createTime
+        FROM stay_guest
+        WHERE stay_id = #{stayId}
+        ORDER BY is_main DESC, id
+    </select>
+
 </mapper>

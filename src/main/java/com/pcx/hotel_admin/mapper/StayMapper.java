@@ -4,6 +4,7 @@ import com.pcx.hotel_admin.entity.Stay;
 import com.pcx.hotel_admin.entity.StayGuest;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import java.util.List;
 
 @Mapper
 public interface StayMapper {
@@ -14,4 +15,6 @@ public interface StayMapper {
     Stay selectActiveStayByRoomId(@Param("roomId") Long roomId);
     
     int checkoutStay(@Param("id") Long id);
+    
+    List<StayGuest> selectGuestsByStayId(@Param("stayId") Long stayId);
 }
